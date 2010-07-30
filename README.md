@@ -4,5 +4,5 @@ repo contains the installers I've written to help me do this.
 Available Installers
 ====================
 
- * gitflow
-   http://github.com/nvie/gitflow
+ * gitflow <br/>
+   <http://github.com/nvie/gitflow>
