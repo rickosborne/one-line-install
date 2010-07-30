@@ -1,19 +1,19 @@
-# Edit this file to suit your needs, then close it to continue the install
+# Edit this file to suit your needs, then close it to continue the install.
 
 # Valid repos: "git", "github", "svn" (default)
-# COUCHDB_REPO="trunk"
+# COUCHDB_REPO="git"
 
-# use just version number like "0.9.x" or "trunk"
+# Use just a version number like "1.0.x", "0.9.x", or "trunk".
 # COUCHDB_VERSION="trunk"
 
-# use full svn path for branches like "branches/0.9.x" or "trunk"
+# If your repo is SVN, use a full svn path for branches like "branches/0.9.x" or "trunk"
 # COUCHDB_SVNPATH="trunk"
 
-# Known-good include "R13B04" and "R12B-5"
+# Known-good include "R13B04" and "R12B-5" as of 2010-07
 # ERLANG_VERSION="R13B04"
 
-# Known-good include "1.7.0" and "1.8.0-rc1"
+# Known-good include "1.7.0" and "1.8.0-rc1" as of 2010-07
 # JS_VERSION="1.8.0-rc1"
 
-# To force a build of 32- or 64-bit, set this to 32 or 64, or leave blank for default
+# To force a build of 32- or 64-bit on Darwin, set this to 32 or 64, or leave blank for default
 # BUILD_BITS=""

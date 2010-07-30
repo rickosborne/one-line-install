@@ -56,6 +56,11 @@ if [ -z "$BUILD_BITS"]; then
 	BUILD_BITS=""
 fi
 
+# We may need a package manager to get build dependencies
+if [ -z "$PACKAGE_MANAGER"]; then
+	PACKAGE_MANAGER=""
+fi
+
 # make options
 MAKE_OPTS="-j4"
 
@@ -93,34 +98,57 @@ COUCHDBDISTDIR="$COUCHDBSRCDIR$BITSUFFIX"
 
 HOST_OS="`uname`"
 
-# We may need a package manager to get build dependencies
-if [ -z "$PACKAGE_MANAGER" ]; then
-	PACKAGE_MANAGER_DEFAULT="echo"
-	PACKAGE_MANAGER="$PACKAGE_MANAGER_DEFAULT"
-	if [ "$HOST_OS" = "Linux" ]; then
-		for pkgmgr in "apt-get" "yum" "rpm" ; do
-			if [ "$PACKAGE_MANAGER" = "$PACKAGE_MANAGER_DEFAULT" ]; then
-				PACKAGE_MANAGER_WHICH=`which $pkgmgr`
-				if [ ! "$PACKAGE_MANAGER_WHICH" = "" ]; then
-					PACKAGE_MANAGER="$PACKAGE_MANAGER_WHICH"
-				fi
-			fi
-		done
-	fi
-	if [ "$HOST_OS" = "Darwin" ]; then
-		for pkgmgr in "port" "fink" ; do
-			if [ "$PACKAGE_MANAGER" = "$PACKAGE_MANAGER_DEFAULT" ]; then
-				PACKAGE_MANAGER_WHICH=`which $pkgmgr`
-				if [ ! "$PACKAGE_MANAGER_WHICH" = "" ]; then
-					PACKAGE_MANAGER="$PACKAGE_MANAGER_WHICH"
-				fi
-			fi
-		done
-	fi
-fi
-sudo $PACKAGE_MANAGER install libtool
+# Clean up
+# rm -rf .js-*installed
+# Work around a bug where a failed build leaves erlang, which then breaks further builds
+# TODO: Make the erlang build be more calm
+rm -rf .erlang-*-installed
+rm -rf dist/couchdb_*
+rm -rf dist/erlang*
 
 #functions
+
+find_package_manager()
+{
+	if [ -z "$PACKAGE_MANAGER" ]; then
+		PACKAGE_MANAGER_DEFAULT="echo"
+		PACKAGE_MANAGER="$PACKAGE_MANAGER_DEFAULT"
+		if [ "$HOST_OS" = "Linux" ]; then
+			for pkgmgr in "apt-get" "yum" "rpm" ; do
+				if [ "$PACKAGE_MANAGER" = "$PACKAGE_MANAGER_DEFAULT" ]; then
+					echo "Looking for $pkgmgr"
+					PACKAGE_MANAGER_WHICH=`which $pkgmgr`
+					if [ ! "$PACKAGE_MANAGER_WHICH" = "" ]; then
+						PACKAGE_MANAGER="$PACKAGE_MANAGER_WHICH"
+					fi
+				fi
+			done
+		fi
+		if [ "$HOST_OS" = "Darwin" ]; then
+			for pkgmgr in "port" "fink" ; do
+				echo "Looking for $pkgmgr"
+				if [ "$PACKAGE_MANAGER" = "$PACKAGE_MANAGER_DEFAULT" ]; then
+					PACKAGE_MANAGER_WHICH=`which $pkgmgr`
+					if [ ! "$PACKAGE_MANAGER_WHICH" = "" ]; then
+						PACKAGE_MANAGER="$PACKAGE_MANAGER_WHICH"
+					fi
+				fi
+			done
+		fi
+	fi
+}
+
+build_deps()
+{
+	if [ -z "$PACKAGE_MANAGER" ]; then
+		echo "No package manager was found, so dependencies won't be checked."
+	else
+		if [ -z "`which libtool`" ]; then
+			sudo $PACKAGE_MANAGER install libtool
+		fi
+	fi
+}
+
 erlang_download()
 {
   if [ ! -e .erlang-$ERLANG_VERSION-downloaded ]; then
@@ -458,7 +486,8 @@ bundle_app()
 }
 
 # main:
-
+find_package_manager
+build_deps
 create_dirs
 erlang
 js
