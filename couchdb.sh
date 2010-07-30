@@ -413,7 +413,9 @@ download_js()
     rm -Rf ./js
     tar xzf js-$JS_VERSION.tar.gz
     if [ "$HOST_OS" = "Darwin" ]; then
-      patch -N -p0 < ../couchdbx-core/patches/js/patch-jsprf.c
+	  cd js/src
+      patch -N -p0 < ../../../couchdbx-core/patches/js/patch-jsprf.c
+      cd ../..
     fi
     cd ..
   fi
@@ -421,17 +423,16 @@ download_js()
 
 install_js()
 {
-  if [ ! -e .js-$JS_VERSION-installed ]; then
-    if [ "$HOST_OS" = "Darwin" ]; then
-      soext="dylib"
-    else
-      soext="so"
-    fi
+  if [ "$HOST_OS" = "Darwin" ]; then
+    soext="dylib"
+  else
+    soext="so"
+  fi
+  if [ ! -e "$WORKDIR/dist/js/lib/libjs.$soext" ]; then
     cd src/js/src
     make $MAKEOPTS -f Makefile.ref
     JS_DIST=$WORKDIR/dist/js make -f Makefile.ref export
-    cd ../../../
-    touch .js-$JS_VERSION-installed
+    cd ../../..
   fi
 }
 
@@ -486,8 +487,8 @@ build_app()
 find_package_manager
 create_dirs
 build_deps
-erlang
 js
+erlang
 couchdb
 erlang_post_install
 strip_erlang_dist
