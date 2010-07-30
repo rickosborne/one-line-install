@@ -398,17 +398,15 @@ download_js()
   if [ ! -e .js-$JS_VERSION-downloaded ]; then
     cd src
     if [ ! -e js-$JS_VERSION.tar.gz ]; then
-      wget http://ftp.mozilla.org/pub/mozilla.org/js/js-$JS_VERSION.tar.gz
+      wget "http://ftp.mozilla.org/pub/mozilla.org/js/js-$JS_VERSION.tar.gz"
     fi
     rm -Rf ./js
     tar xzf js-$JS_VERSION.tar.gz
     if [ "$HOST_OS" = "Darwin" ]; then
-      cd js/src
       if [ ! -e "patch-jsprf.c" ]; then
-        wget -q -O patch-jsprf.c https://trac.macports.org/raw-attachment/ticket/25467/patch-jsprf.c
+        wget -q -O patch-jsprf.c "http://trac.macports.org/raw-attachment/ticket/25467/patch-jsprf.c"
       fi
       patch -N -p0 < patch-jsprf.c
-      cd ../..
     fi
     cd ..
     touch .js-$JS_VERSION-downloaded
@@ -437,52 +435,45 @@ js()
   install_js
 }
 
-package()
-{
-  PACKAGEDIR="couchdbx-core-$ERLANG_VERSION-$COUCHDB_VERSION"
-  rm -rf $PACKAGEDIR
-  mkdir $PACKAGEDIR
-  cp -r dist/$ERLANGDISTDIR \
-      dist/$COUCHDBDISTDIR \
-      src/js \
-      $PACKAGEDIR
-  install_name_tool -change Darwin_DBG.OBJ/libjs.dylib js/lib/libjs.dylib \
-  $PACKAGEDIR/$COUCHDBDISTDIR/lib/couchdb/bin/couchjs
-  cd $PACKAGEDIR
-  ln -s $COUCHDBDISTDIR couchdb
-  cd ..
-  tar czf $PACKAGEDIR.tar.gz $PACKAGEDIR
-
-  cd dist/
-  rm -rf $ERLANGDISTDIR
-  mv erlang $ERLANGDISTDIR
-  cd ..
-}
-
 build_app()
 {
-  cd ../couchdbx-app
-  xcodebuild
-  cd ../couchdbx-core
-}
+	if [ -z "`which xcodebuild`" ]; then
+		echo "Skipping .app bundle, as XCode does not seem to be present."
+	else
+		if [ -d "couchdbx-app" ]; then
+			git clone http://github.com/janl/couchdbx-app.git
+		fi
+		PACKAGEDIR="couchdbx-core-$ERLANG_VERSION-$COUCHDB_VERSION"
+		rm -rf $PACKAGEDIR
+		mkdir $PACKAGEDIR
+		cp -r dist/$ERLANGDISTDIR dist/$COUCHDBDISTDIR src/js $PACKAGEDIR
+		install_name_tool -change Darwin_DBG.OBJ/libjs.dylib js/lib/libjs.dylib $PACKAGEDIR/$COUCHDBDISTDIR/lib/couchdb/bin/couchjs
+		cd $PACKAGEDIR
+		ln -s $COUCHDBDISTDIR couchdb
+		cd ..
+		tar czf $PACKAGEDIR.tar.gz $PACKAGEDIR
 
-bundle_app()
-{
-  cp -r ../couchdbx-app/build/Release/CouchDBX.app .
+		cd dist/
+		rm -rf $ERLANGDISTDIR
+		mv erlang $ERLANGDISTDIR
+		cd ../couchdbx-app
+		xcodebuild
+		cd ..
+		cp -r couchdbx-app/build/Release/CouchDBX.app .
 
-  cp -r $PACKAGEDIR CouchDBX.app/Contents/Resources/couchdbx-core
-  cd CouchDBX.app/Contents/Resources/couchdbx-core/
-  rm -rf couchdb
-  ln -s $COUCHDBDISTDIR couchdb
-  cd ../../../../
+		cp -r $PACKAGEDIR CouchDBX.app/Contents/Resources/couchdbx-core
+		cd CouchDBX.app/Contents/Resources/couchdbx-core/
+		rm -rf couchdb
+		ln -s $COUCHDBDISTDIR couchdb
+		cd ../../../../
 
-  DEST_APP_PATH="CouchDBX-$ERLANG_VERSION-$COUCHDB_VERSION$BITSUFFIX.app"
-  mv CouchDBX.app $DEST_APP_PATH
-  mkdir bundle
-  mv $DEST_APP_PATH bundle
-  ditto -c -k --sequesterRsrc bundle \
-    $DEST_APP_PATH.zip
-  rm -rf bundle
+		DEST_APP_PATH="CouchDBX-$ERLANG_VERSION-$COUCHDB_VERSION$BITSUFFIX.app"
+		mv CouchDBX.app $DEST_APP_PATH
+		mkdir bundle
+		mv $DEST_APP_PATH bundle
+		ditto -c -k --sequesterRsrc bundle $DEST_APP_PATH.zip
+		rm -rf bundle
+	fi
 }
 
 # main:
@@ -494,8 +485,8 @@ js
 couchdb
 erlang_post_install
 strip_erlang_dist
-# package
-# build_app
-# bundle_app
+if [ "$HOST_OS" = "Darwin" ]; then
+  build_app
+fi
 
 echo "Done."
