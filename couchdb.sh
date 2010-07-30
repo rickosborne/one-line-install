@@ -91,7 +91,34 @@ ERLANGDISTDIR="$ERLANGSRCDIR$BITSUFFIX"
 COUCHDBSRCDIR="couchdb_$COUCHDB_VERSION"
 COUCHDBDISTDIR="$COUCHDBSRCDIR$BITSUFFIX"
 
-HOST_OS=`uname`
+HOST_OS="`uname`"
+
+# We may need a package manager to get build dependencies
+if [ -z "$PACKAGE_MANAGER" ]; then
+	PACKAGE_MANAGER_DEFAULT="echo"
+	PACKAGE_MANAGER="$PACKAGE_MANAGER_DEFAULT"
+	if [ "$HOST_OS" = "Linux" ]; then
+		for pkgmgr in "apt-get" "yum" "rpm" ; do
+			if [ "$PACKAGE_MANAGER" = "$PACKAGE_MANAGER_DEFAULT" ]; then
+				PACKAGE_MANAGER_WHICH=`which $pkgmgr`
+				if [ ! "$PACKAGE_MANAGER_WHICH" = "" ]; then
+					PACKAGE_MANAGER="$PACKAGE_MANAGER_WHICH"
+				fi
+			fi
+		done
+	fi
+	if [ "$HOST_OS" = "Darwin" ]; then
+		for pkgmgr in "port" "fink" ; do
+			if [ "$PACKAGE_MANAGER" = "$PACKAGE_MANAGER_DEFAULT" ]; then
+				PACKAGE_MANAGER_WHICH=`which $pkgmgr`
+				if [ ! "$PACKAGE_MANAGER_WHICH" = "" ]; then
+					PACKAGE_MANAGER="$PACKAGE_MANAGER_WHICH"
+				fi
+			fi
+		done
+	fi
+fi
+sudo $PACKAGE_MANAGER install libtool
 
 #functions
 erlang_download()
@@ -315,7 +342,7 @@ couchdb_link_erl_driver()
 
 couchdb_post_install()
 {
-  if [ "`uname`" = "Darwin" ]; then
+  if [ "$HOST_OS" = "Darwin" ]; then
     # build couch_erl_driver.so against bundled ICU
     couchdb_link_erl_driver
   fi
