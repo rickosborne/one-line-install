@@ -1,0 +1,19 @@
+# Edit this file to suit your needs, then close it to continue the install
+
+# Valid repos: "git", "github", "svn" (default)
+# COUCHDB_REPO="trunk"
+
+# use just version number like "0.9.x" or "trunk"
+# COUCHDB_VERSION="trunk"
+
+# use full svn path for branches like "branches/0.9.x" or "trunk"
+# COUCHDB_SVNPATH="trunk"
+
+# Known-good include "R13B04" and "R12B-5"
+# ERLANG_VERSION="R13B04"
+
+# Known-good include "1.7.0" and "1.8.0-rc1"
+# JS_VERSION="1.8.0-rc1"
+
+# To force a build of 32- or 64-bit, set this to 32 or 64, or leave blank for default
+# BUILD_BITS=""
