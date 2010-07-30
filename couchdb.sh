@@ -147,6 +147,17 @@ build_deps()
 			sudo $PACKAGE_MANAGER install libtool
 		fi
 	fi
+	if [ "$HOST_OS" = "Darwin" ]; then
+		if [ ! -d "couchdbx-core" ]; then
+			git clone "http://github.com/janl/couchdbx-core.git"
+		fi
+		if [ ! -d "src/icu" ]; then
+			cp -r couchdbx-core/src/icu src/icu
+		fi
+		if [ ! -d "couchdbx-app" ]; then
+			git clone "http://github.com/janl/couchdbx-app.git"
+		fi
+	fi
 }
 
 erlang_download()
@@ -344,7 +355,6 @@ couchdb_install()
 
 couchdb_link_erl_driver()
 {
-
   if [ -d "src/couchdb/priv/icu_driver/" ]; then # we're on trunk
     cd src/couchdb/priv/icu_driver/
       gcc -I$WORKDIR/src/icu -I/usr/include -L/usr/lib \
@@ -403,10 +413,7 @@ download_js()
     rm -Rf ./js
     tar xzf js-$JS_VERSION.tar.gz
     if [ "$HOST_OS" = "Darwin" ]; then
-      if [ ! -e "patch-jsprf.c" ]; then
-        wget -q -O patch-jsprf.c "http://trac.macports.org/raw-attachment/ticket/25467/patch-jsprf.c"
-      fi
-      patch -N -p0 < patch-jsprf.c
+      patch -N -p0 < ../couchdbx-core/patches/js/patch-jsprf.c
     fi
     cd ..
     touch .js-$JS_VERSION-downloaded
@@ -440,9 +447,6 @@ build_app()
 	if [ -z "`which xcodebuild`" ]; then
 		echo "Skipping .app bundle, as XCode does not seem to be present."
 	else
-		if [ -d "couchdbx-app" ]; then
-			git clone http://github.com/janl/couchdbx-app.git
-		fi
 		PACKAGEDIR="couchdbx-core-$ERLANG_VERSION-$COUCHDB_VERSION"
 		rm -rf $PACKAGEDIR
 		mkdir $PACKAGEDIR
@@ -478,8 +482,8 @@ build_app()
 
 # main:
 find_package_manager
-build_deps
 create_dirs
+build_deps
 erlang
 js
 couchdb
