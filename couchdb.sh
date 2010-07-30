@@ -9,7 +9,8 @@ COUCHDB_DEFAULT="./couchdb.default"
 COUCHDB_DEFAULT_SRC="http://github.com/rickosborne/one-line-install/raw/master/etc/default/couchdb"
 
 if [ ! -e "$COUCHDB_DEFAULT" ]; then
-	wget -q -O $COUCHDB_DEFAULT $COUCHDB_DEFAULT_SRC
+	wget -q -O "$COUCHDB_DEFAULT.part" $COUCHDB_DEFAULT_SRC
+	mv "$COUCHDB_DEFAULT.part" "$COUCHDB_DEFAULT"
 fi
 
 if [ -z "$EDITOR" ]; then
@@ -162,18 +163,16 @@ build_deps()
 
 erlang_download()
 {
-  if [ ! -e .erlang-$ERLANG_VERSION-downloaded ]; then
     FILE_NAME="otp_src_$ERLANG_VERSION"
     BASE_URL="http://www.csd.uu.se/ftp/mirror/erlang/download"
     cd src
-    if [ ! -e $FILE_NAME.tar.gz ]; then
-      wget $BASE_URL/$FILE_NAME.tar.gz
+    if [ ! -e "$FILE_NAME.tar.gz" ]; then
+      wget -O "$FILE_NAME.tar.gz.part" $BASE_URL/$FILE_NAME.tar.gz
+      mv "$FILE_NAME.tar.gz.part" "$FILE_NAME.tar.gz"
+      tar xzf $FILE_NAME.tar.gz
+      mv $FILE_NAME $ERLANGSRCDIR
     fi
-    tar xzf $FILE_NAME.tar.gz
-    mv $FILE_NAME $ERLANGSRCDIR
     cd ..
-    touch .erlang-$ERLANG_VERSION-downloaded
-  fi
 }
 
 erlang_install()
@@ -405,10 +404,11 @@ create_dirs()
 
 download_js()
 {
-  if [ ! -e .js-$JS_VERSION-downloaded ]; then
+  if [ ! -e "js-$JS_VERSION.tar.gz" ]; then
     cd src
     if [ ! -e js-$JS_VERSION.tar.gz ]; then
-      wget "http://ftp.mozilla.org/pub/mozilla.org/js/js-$JS_VERSION.tar.gz"
+      wget -O "js-$JS_VERSION.tar.gz.part" "http://ftp.mozilla.org/pub/mozilla.org/js/js-$JS_VERSION.tar.gz"
+      mv "js-$JS_VERSION.tar.gz.part" "js-$JS_VERSION.tar.gz"
     fi
     rm -Rf ./js
     tar xzf js-$JS_VERSION.tar.gz
@@ -416,7 +416,6 @@ download_js()
       patch -N -p0 < ../couchdbx-core/patches/js/patch-jsprf.c
     fi
     cd ..
-    touch .js-$JS_VERSION-downloaded
   fi
 }
 
@@ -447,6 +446,9 @@ build_app()
 	if [ -z "`which xcodebuild`" ]; then
 		echo "Skipping .app bundle, as XCode does not seem to be present."
 	else
+		# minor tweaks
+		perl -p -i -e 's!(/bin/sh -e\\n)(cp -r [.][.]/couchdbx-builder)!$1# $2!g' couchdbx-app/CouchDBX.xcodeproj/project.pbxproj
+		perl -p -i -e 's!(\s*)SDKROOT = "[^"]+"!${1}SDKROOT = "";\n${1}VALID_ARCHS = "i386 x86_64"!g' couchdbx-app/CouchDBX.xcodeproj/project.pbxproj
 		PACKAGEDIR="couchdbx-core-$ERLANG_VERSION-$COUCHDB_VERSION"
 		rm -rf $PACKAGEDIR
 		mkdir $PACKAGEDIR
