@@ -1,11 +1,11 @@
 #!/bin/sh -ex
-# CouchDBX-Core-Builder
+# Couch-Builder
 # Downloads, Install Erlang & CouchDB into a package
 # Copyright 2009 Jan Lehnardt <jan@apache.org>
 # Apache 2.0 Licensed
 # Modifications by Rick Osborne for <http://github.com/rickosborne/one-line-install>
 
-COUCHDB_DEFAULT="couchdb.default"
+COUCHDB_DEFAULT="./couchdb.default"
 COUCHDB_DEFAULT_SRC="http://github.com/rickosborne/one-line-install/raw/master/etc/default/couchdb"
 
 if [ ! -e "$COUCHDB_DEFAULT" ]; then
@@ -90,6 +90,8 @@ ERLANGDISTDIR="$ERLANGSRCDIR$BITSUFFIX"
 
 COUCHDBSRCDIR="couchdb_$COUCHDB_VERSION"
 COUCHDBDISTDIR="$COUCHDBSRCDIR$BITSUFFIX"
+
+HOST_OS=`uname`
 
 #functions
 erlang_download()
@@ -345,9 +347,15 @@ download_js()
     fi
     rm -Rf ./js
     tar xzf js-$JS_VERSION.tar.gz
-    cd js/src
-    patch -N -p0 < ../../../patches/js/patch-jsprf.c
-    cd ../../..
+    if [ "$HOST_OS" = "Darwin" ]; then
+      cd js/src
+      if [ ! -e "patch-jsprf.c" ]; then
+        wget -q -O patch-jsprf.c https://trac.macports.org/raw-attachment/ticket/25467/patch-jsprf.c
+      fi
+      patch -N -p0 < patch-jsprf.c
+      cd ../..
+    fi
+    cd ..
     touch .js-$JS_VERSION-downloaded
   fi
 }
@@ -355,8 +363,7 @@ download_js()
 install_js()
 {
   if [ ! -e .js-$JS_VERSION-installed ]; then
-    uname=`uname`
-    if [ "$uname" = "Darwin" ]; then
+    if [ "$HOST_OS" = "Darwin" ]; then
       soext="dylib"
     else
       soext="so"
