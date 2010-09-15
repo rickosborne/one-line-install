@@ -67,21 +67,22 @@ case "$1" in
 			git submodule init
 			git submodule update
 			# Since submodules use git:// this may have failed - try http://
-			if [ ! -f "$REPO_NAME/$SUBMODULE_FILE" ] ; then
-				sed -e 's/git:/http:/g' "$REPO_NAME/$MODULES_FILE" > "http-$MODULES_FILE"
+			if [ ! -f "$SUBMODULE_FILE" ] ; then
+				sed -e 's/git:/http:/g' "$MODULES_FILE" > "http-$MODULES_FILE"
 				echo "It looks like the submodule update failed."
-				if [ -z `diff "$REPO_NAME/$MODULES_FILE" "http-$MODULES_FILE"` ] ; then
+				if [ -z `diff "$MODULES_FILE" "http-$MODULES_FILE"` ] ; then
 					echo " ... and it appears to be an unrecoverable problem.  Sorry!"
-					rm "$REPO_NAME/http-$MODULES_FILE"
+					rm "http-$MODULES_FILE"
+					cd "$lastcwd"
 					exit
 				fi
 				echo "Trying to update submodules with http:// instead of git://"
-				echo " ... replacing your $REPO_NAME/.gitmodules file for a moment"
-				cp "$REPO_NAME/$MODULES_FILE" "original-$MODULES_FILE"
-				mv "http-$MODULES_FILE" "$REPO_NAME/$MODULES_FILE"
+				echo " ... updating your .gitmodules file for a moment"
+				cp "$MODULES_FILE" "original-$MODULES_FILE"
+				mv "http-$MODULES_FILE" "$MODULES_FILE"
 				git submodule update
-				echo " ... replacing your original $REPO_NAME/.gitmodules file"
-				mv "original-$MODULES_FILE" "$REPO_NAME/$MODULES_FILE"
+				echo " ... reverting back to your original .gitmodules file"
+				mv "original-$MODULES_FILE" "$MODULES_FILE"
 			fi
 			cd "$lastcwd"
 		fi
