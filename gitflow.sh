@@ -23,7 +23,12 @@ fi
 EXEC_FILES="git-flow"
 SCRIPT_FILES="git-flow-init git-flow-feature git-flow-hotfix git-flow-release git-flow-support git-flow-version gitflow-common gitflow-shFlags"
 SUBMODULE_FILE="shFlags/src/shflags"
-MODULES_FILE=".gitmodules"
+MODULES_ORIG=".gitmodules"
+MODULES_HTTP=".gitmodules-http"
+MODULES_BAK=".gitmodules-backup"
+CONFIG_ORIG=".git/config"
+CONFIG_HTTP=".gitconfig-http"
+CONFIG_BAK=".gitconfig-backup"
 SUDO="sudo"
 
 echo "### gitflow no-make installer ###"
@@ -68,25 +73,28 @@ case "$1" in
 			git submodule update
 			# Since submodules use git:// this may have failed - try http://
 			if [ ! -f "$SUBMODULE_FILE" ] ; then
-				sed -e 's/git:/http:/g' "./$MODULES_FILE" > "http-$MODULES_FILE"
+				sed -e 's/git:/http:/g' "./$MODULES_ORIG" > "./$MODULES_HTTP"
+				sed -e 's/git:/http:/g' "./$CONFIG_ORIG" > "./$CONFIG_HTTP"
 				echo "It looks like the submodule update failed."
-				MOD_DIFF=`diff -q "$MODULES_FILE" "http-$MODULES_FILE"`
-				if [ -z "$MOD_DIFF" ] ; then
+				MOD_DIFF=`diff -q "./$MODULES_ORIG" "./$MODULES_HTTP"`
+				CONF_DIFF=`diff -q "./$CONFIG_ORIG" "./$CONFIG_HTTP"`
+				if [ -z "$MOD_DIFF$CONF_DIFF" ] ; then
 					echo " ... and it appears to be an unrecoverable problem.  Sorry!"
 					rm "http-$MODULES_FILE"
 					cd "$lastcwd"
 					exit
 				fi
 				echo "Trying to update submodules with http:// instead of git://"
-				echo " ... updating your .gitmodules file for a moment"
-				cp "$MODULES_FILE" "original-$MODULES_FILE"
-				mv "http-$MODULES_FILE" "./$MODULES_FILE"
-				echo " ... this is your temporary .gitmodules file:"
-				cat "./$MODULES_FILE"
+				echo " ... updating your .gitmodules and .git/config files for a moment"
+				cp "./$MODULES_ORIG" "./$MODULES_BAK"
+				mv "./$MODULES_HTTP" "./$MODULES_ORIG"
+				cp "./$CONFIG_ORIG" "./$CONFIG_BAK"
+				mv "./$CONFIG_HTTP" "./$CONFIG_ORIG"
 				echo " ... trying the update again"
 				git submodule update
-				echo " ... reverting back to your original .gitmodules file"
-				mv "original-$MODULES_FILE" "./$MODULES_FILE"
+				echo " ... reverting back to your original .gitmodules and .git/config files"
+				mv "./$MODULES_BAK" "./$MODULES_ORIG"
+				mv "./$CONFIG_BAK" "./$CONFIG_ORIG"
 				if [ ! -f "$SUBMODULE_FILE" ] ; then
 					echo "Sorry, but that didn't appear to work, either."
 					cd "$lastcwd"
