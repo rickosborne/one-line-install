@@ -68,15 +68,25 @@ case "$1" in
 			git submodule update
 			# Since submodules use git:// this may have failed - try http://
 			if [ ! -f "$REPO_NAME/$SUBMODULE_FILE" ] ; then
-				cp "$REPO_NAME/$MODULES_FILE" "$REPO_NAME/backup-$MODULES_FILE"
-				sed -i '' 's/git:/http:/g' "$REPO_NAME/$MODULES_FILE"
+				sed -e 's/git:/http:/g' "$REPO_NAME/$MODULES_FILE" > "http-$MODULES_FILE"
+				echo "It looks like the submodule update failed."
+				if [ -z `diff "$REPO_NAME/$MODULES_FILE" "http-$MODULES_FILE"` ] ; then
+					echo " ... and it appears to be an unrecoverable problem.  Sorry!"
+					rm "$REPO_NAME/http-$MODULES_FILE"
+					exit
+				fi
+				echo "Trying to update submodules with http:// instead of git://"
+				echo " ... replacing your $REPO_NAME/.gitmodules file for a moment"
+				cp "$REPO_NAME/$MODULES_FILE" "original-$MODULES_FILE"
+				mv "http-$MODULES_FILE" "$REPO_NAME/$MODULES_FILE"
 				git submodule update
-				mv "$REPO_NAME/backup-$MODULES_FILE" "$REPO_NAME/$MODULES_FILE"
+				echo " ... replacing your original $REPO_NAME/.gitmodules file"
+				mv "original-$MODULES_FILE" "$REPO_NAME/$MODULES_FILE"
 			fi
 			cd "$lastcwd"
 		fi
 		echo "###"
-		echo "### Installing files.  You may get prompted for your 'sudo' password."
+		echo "### Installing files.  You may get prompted for your '$SUDO' password."
 		echo "###"
 		"$SUDO" install -v -d -m 0755 "$INSTALL_PREFIX"
 		for exec_file in $EXEC_FILES ; do
