@@ -22,7 +22,9 @@ fi
 
 EXEC_FILES="git-flow"
 SCRIPT_FILES="git-flow-init git-flow-feature git-flow-hotfix git-flow-release git-flow-support git-flow-version gitflow-common gitflow-shFlags"
-SUBMODULE_FILE="gitflow-shFlags"
+SUBMODULE_FILE="shFlags/src/shflags"
+MODULES_FILE=".gitmodules"
+SUDO="sudo"
 
 echo "### gitflow no-make installer ###"
 
@@ -64,14 +66,24 @@ case "$1" in
 			cd "$REPO_NAME"
 			git submodule init
 			git submodule update
+			# Since submodules use git:// this may have failed - try http://
+			if [ ! -f "$REPO_NAME/$SUBMODULE_FILE" ] ; then
+				cp "$REPO_NAME/$MODULES_FILE" "$REPO_NAME/backup-$MODULES_FILE"
+				sed -i '' 's/git:/http:/g' "$REPO_NAME/$MODULES_FILE"
+				git submodule update
+				mv "$REPO_NAME/backup-$MODULES_FILE" "$REPO_NAME/$MODULES_FILE"
+			fi
 			cd "$lastcwd"
 		fi
-		install -v -d -m 0755 "$INSTALL_PREFIX"
+		echo "###"
+		echo "### Installing files.  You may get prompted for your 'sudo' password."
+		echo "###"
+		"$SUDO" install -v -d -m 0755 "$INSTALL_PREFIX"
 		for exec_file in $EXEC_FILES ; do
-			install -v -m 0755 "$REPO_NAME/$exec_file" "$INSTALL_PREFIX"
+			"$SUDO" install -v -m 0755 "$REPO_NAME/$exec_file" "$INSTALL_PREFIX"
 		done
 		for script_file in $SCRIPT_FILES ; do
-			install -v -m 0644 "$REPO_NAME/$script_file" "$INSTALL_PREFIX"
+			"$SUDO" install -v -m 0644 "$REPO_NAME/$script_file" "$INSTALL_PREFIX"
 		done
 		exit
 		;;
