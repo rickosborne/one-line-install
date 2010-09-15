@@ -67,7 +67,7 @@ case "$1" in
 			git submodule init
 			git submodule update
 			# Since submodules use git:// this may have failed - try http://
-			if [ ! -f "-$SUBMODULE_FILE" ] ; then
+			if [ ! -f "$SUBMODULE_FILE" ] ; then
 				sed -e 's/git:/http:/g' "$MODULES_FILE" > "http-$MODULES_FILE"
 				echo "It looks like the submodule update failed."
 				MOD_DIFF=`diff "$MODULES_FILE" "http-$MODULES_FILE"`
