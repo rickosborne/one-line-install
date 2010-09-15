@@ -89,7 +89,7 @@ case "$1" in
 				cp "./$MODULES_ORIG" "./$MODULES_BAK"
 				mv "./$MODULES_HTTP" "./$MODULES_ORIG"
 				cp "./$CONFIG_ORIG" "./$CONFIG_BAK"
-				mv "./$CONFIG_BAK" "./$CONFIG_ORIG"
+				mv "./$CONFIG_HTTP" "./$CONFIG_ORIG"
 				echo " ... trying the update again"
 				git submodule update
 				echo " ... reverting back to your original .gitmodules and .git/config files"
