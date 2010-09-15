@@ -9,6 +9,11 @@
 # If your repo is SVN, use a full svn path for branches like "branches/0.9.x" or "trunk"
 # COUCHDB_SVNPATH="trunk"
 
+# Where should it install to?
+# On Linux, a good default is "/usr/local"
+# On Darwin, leave this empty to build CouchDBX.app
+# COUCHDB_PREFIX=""
+
 # Known-good include "R13B04" and "R12B-5" as of 2010-07
 # ERLANG_VERSION="R13B04"
 

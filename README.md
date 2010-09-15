@@ -15,5 +15,5 @@ Usage Instructions
 
 Available Installers
 ====================
- * gitflow <br/>
-   <http://github.com/nvie/gitflow>
+ * gitflow : <http://github.com/nvie/gitflow>
+        wget -q -O - http://github.com/rickosborne/one-line-install/raw/master/gitflow.sh | sudo sh

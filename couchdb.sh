@@ -21,6 +21,9 @@ fi
 # open an editor
 $EDITOR $COUCHDB_DEFAULT
 
+WORKDIR=`pwd`
+HOST_OS="`uname`"
+
 if [ -r "$COUCHDB_DEFAULT" ]; then
 	. $COUCHDB_DEFAULT
 fi
@@ -69,7 +72,6 @@ MAKE_OPTS="-j4"
 
 # internal vars
 DIRS="src dist"
-WORKDIR=`pwd`
 
 MBITS=""
 BITSUFFIX=""
@@ -78,7 +80,10 @@ if [ "$BUILD_BITS" = "32" ]; then
   echo "\n\n  Forcing 32-bit build\n\n"
   CC="gcc -m32"
   CXX="g++ -m32"
-  ERLANGBUILDARCH="--enable-m32-build --enable-darwin-universal"
+  ERLANGBUILDARCH="--enable-m32-build"
+  if [ "$HOST_OS" = "Darwin" ]; then
+	ERLANGBUILDARCH="$ERLANGBUILDARCH --enable-darwin-universal"
+  fi
   MBITS='-m32'
   BITSUFFIX="_32"
 fi
@@ -86,18 +91,41 @@ if [ "$BUILD_BITS" = "64" ]; then
   echo "\n\n  Forcing 64-bit build\n\n"
   CC="gcc -m64"
   CXX="g++ -m64"
-  ERLANGBUILDARCH="--enable-m64-build --enable-darwin-64bit"
+  ERLANGBUILDARCH="--enable-m64-build"
+  if [ "$HOST_OS" = "Darwin" ]; then
+	ERLANGBUILDARCH="$ERLANGBUILDARCH --enable-darwin-64bit"
+  fi
   MBITS='-m64'
   BITSUFFIX="_64"
 fi
 
-ERLANGSRCDIR="erlang_$ERLANG_VERSION"
-ERLANGDISTDIR="$ERLANGSRCDIR$BITSUFFIX"
-
 COUCHDBSRCDIR="couchdb_$COUCHDB_VERSION"
 COUCHDBDISTDIR="$COUCHDBSRCDIR$BITSUFFIX"
+COUCHDBINSTDIR=""
+COUCHDBX=""
+ERLANG_PREFIX=""
+MAYBESUDO="sudo"
 
-HOST_OS="`uname`"
+# Where should it install to?
+if [ -z "$COUCHDB_PREFIX" ]; then
+	if [ "$HOST_OS" = "Darwin" ]; then
+		COUCHDBINSTDIR="$WORKDIR/dist/$COUCHDBDISTDIR"
+		COUCHDB_PREFIX="--prefix=$COUCHDBINSTDIR"
+		ERLANG_PREFIX="--prefix=$WORKDIR/dist/$ERLANGDISTDIR"
+		COUCHDBX="app"
+		MAYBESUDO=""
+	else
+		COUCHDB_PREFIX=""
+		COUCHDBINSTDIR="/usr/local"
+	fi
+else
+	ERLANG_PREFIX="--prefix=$COUCHDB_PREFIX"
+	COUCHDBINSTDIR="$COUCHDB_PREFIX"
+	COUCHDB_PREFIX="--prefix=$COUCHDBINSTDIR"
+fi
+
+ERLANGSRCDIR="erlang_$ERLANG_VERSION"
+ERLANGDISTDIR="$ERLANGSRCDIR$BITSUFFIX"
 
 # Clean up
 # rm -rf .js-*installed
@@ -105,7 +133,7 @@ HOST_OS="`uname`"
 # TODO: Make the erlang build be more calm
 rm -rf .erlang-*-installed
 rm -rf dist/couchdb_*
-rm -rf dist/erlang*
+# rm -rf dist/erlang*
 
 #functions
 
@@ -179,8 +207,7 @@ erlang_install()
 {
   if [ ! -e .erlang-$ERLANG_VERSION-installed ]; then
     cd src/$ERLANGSRCDIR
-    ./configure \
-      --prefix=$WORKDIR/dist/$ERLANGDISTDIR \
+    ./configure $ERLANG_PREFIX \
       --enable-hipe \
       --enable-dynamic-ssl-lib \
       --with-ssl=/usr \
@@ -188,7 +215,7 @@ erlang_install()
     # skip wxWidgets
     touch lib/wx/SKIP
     make # can't have -jN so no $MAKEOPTS
-    make install
+    $MAYBESUDO make install
     cd ../../
     cd dist
     rm -rf erlang
@@ -336,8 +363,7 @@ couchdb_install()
     export ERLC_FLAGS="+native"
     export ERL=$WORKDIR/dist/$ERLANGDISTDIR/bin/erl
     export ERLC=$WORKDIR/dist/$ERLANGDISTDIR/bin/erlc
-    ./configure \
-      --prefix=$WORKDIR/dist/$COUCHDBDISTDIR \
+    ./configure $COUCHDB_PREFIX \
       --with-erlang=$WORKDIR/dist/$ERLANGDISTDIR/lib/erlang/usr/include/ \
       --with-js-include=$WORKDIR/dist/js/include \
       --with-js-lib=$WORKDIR/dist/js/lib
@@ -345,7 +371,8 @@ couchdb_install()
     unset ERLC_EXECUTABLE
 
     make $MAKE_OPTS
-    make install
+	perl -pi -e "s@$WORKDIR/dist/@@g" bin/couchdb bin/couchjs etc/couchdb/default.ini
+	$MAYBESUDO make install
     couchdb_post_install
     cd ../../
   #   touch .couchdb-installed
@@ -355,40 +382,39 @@ couchdb_install()
 couchdb_link_erl_driver()
 {
   if [ -d "src/couchdb/priv/icu_driver/" ]; then # we're on trunk
+	DRIVERSO="src/couchdb/priv/icu_driver/couch_icu_driver.so"
     cd src/couchdb/priv/icu_driver/
       gcc -I$WORKDIR/src/icu -I/usr/include -L/usr/lib \
           -I$WORKDIR/dist/$ERLANGDISTDIR/lib/erlang/usr/include/ \
           -lpthread -lm -licucore \
           -flat_namespace -undefined suppress -bundle $MBITS \
           -o couch_icu_driver.so couch_icu_driver.c -fPIC
-      mv couch_icu_driver.so \
-        ../../../../../../dist/$COUCHDBDISTDIR/lib/couchdb/erlang/lib/couch-*/priv/lib
       cd ../../../../
   else # we're on 0.10 or earlier
+	DRIVERSO="src/couchdb/couch_erl_driver.so"
     cd src/couchdb
       gcc -I$WORKDIR/src/icu -I/usr/include -L/usr/lib \
           -I$WORKDIR/dist/$ERLANGDISTDIR/lib/erlang/usr/include/ \
           -lpthread -lm -licucore \
           -flat_namespace -undefined suppress -bundle $MBITS \
           -o couch_erl_driver.so couch_erl_driver.c -fPIC
-      mv couch_erl_driver.so \
-        ../../../../dist/$COUCHDBDISTDIR/lib/couchdb/erlang/lib/couch-*/priv/lib
       cd ../../
   fi
+  $MAYBESUDO mv $DRIVERSO $COUCHDBINSTDIR/lib/couchdb/erlang/lib/couch-*/priv/lib
 }
 
 couchdb_post_install()
 {
-  if [ "$HOST_OS" = "Darwin" ]; then
-    # build couch_erl_driver.so against bundled ICU
-    couchdb_link_erl_driver
-  fi
+	if [ "$HOST_OS" = "Darwin" ]; then
+		# build couch_erl_driver.so against bundled ICU
+		couchdb_link_erl_driver
+		if [ ! -z "$COUCHDBX" ]; then
+			# building CouchDBX.app, replace absolute to relative paths
+			cd $WORKDIR/dist/$COUCHDBDISTDIR
+		fi
+	fi
 
-  cd ../../dist/$COUCHDBDISTDIR
-  # replace absolute to relative paths
-  perl -pi -e "s@$WORKDIR/dist/@@g" bin/couchdb bin/couchjs etc/couchdb/default.ini
-
-  cd ../../src/$COUCHDBSRCDIR
+	cd $WORKDIR/src/$COUCHDBSRCDIR
 }
 
 couchdb()
@@ -492,8 +518,9 @@ erlang
 couchdb
 erlang_post_install
 strip_erlang_dist
-if [ "$HOST_OS" = "Darwin" ]; then
-  build_app
+if [ ! -z "$COUCHDBX" ]; then
+	build_app
 fi
+
 
 echo "Done."
