@@ -70,7 +70,8 @@ case "$1" in
 			if [ ! -f "$SUBMODULE_FILE" ] ; then
 				sed -e 's/git:/http:/g' "$MODULES_FILE" > "http-$MODULES_FILE"
 				echo "It looks like the submodule update failed."
-				if [ -z `diff "$MODULES_FILE" "http-$MODULES_FILE"` ] ; then
+				MOD_DIFF=`diff "$MODULES_FILE" "http-$MODULES_FILE"`
+				if [ -z "$MOD_DIFF" ] ; then
 					echo " ... and it appears to be an unrecoverable problem.  Sorry!"
 					rm "http-$MODULES_FILE"
 					cd "$lastcwd"
