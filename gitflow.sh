@@ -22,7 +22,9 @@ fi
 
 EXEC_FILES="git-flow"
 SCRIPT_FILES="git-flow-init git-flow-feature git-flow-hotfix git-flow-release git-flow-support git-flow-version gitflow-common gitflow-shFlags"
-SUBMODULE_FILE="gitflow-shFlags"
+SUBMODULE_FILE="shFlags/src/shflags"
+MODULES_FILE=".gitmodules"
+SUDO="sudo"
 
 echo "### gitflow no-make installer ###"
 
@@ -64,14 +66,34 @@ case "$1" in
 			cd "$REPO_NAME"
 			git submodule init
 			git submodule update
+			# Since submodules use git:// this may have failed - try http://
+			if [ ! -f "$REPO_NAME/$SUBMODULE_FILE" ] ; then
+				sed -e 's/git:/http:/g' "$REPO_NAME/$MODULES_FILE" > "http-$MODULES_FILE"
+				echo "It looks like the submodule update failed."
+				if [ -z `diff "$REPO_NAME/$MODULES_FILE" "http-$MODULES_FILE"` ] ; then
+					echo " ... and it appears to be an unrecoverable problem.  Sorry!"
+					rm "$REPO_NAME/http-$MODULES_FILE"
+					exit
+				fi
+				echo "Trying to update submodules with http:// instead of git://"
+				echo " ... replacing your $REPO_NAME/.gitmodules file for a moment"
+				cp "$REPO_NAME/$MODULES_FILE" "original-$MODULES_FILE"
+				mv "http-$MODULES_FILE" "$REPO_NAME/$MODULES_FILE"
+				git submodule update
+				echo " ... replacing your original $REPO_NAME/.gitmodules file"
+				mv "original-$MODULES_FILE" "$REPO_NAME/$MODULES_FILE"
+			fi
 			cd "$lastcwd"
 		fi
-		install -v -d -m 0755 "$INSTALL_PREFIX"
+		echo "###"
+		echo "### Installing files.  You may get prompted for your '$SUDO' password."
+		echo "###"
+		"$SUDO" install -v -d -m 0755 "$INSTALL_PREFIX"
 		for exec_file in $EXEC_FILES ; do
-			install -v -m 0755 "$REPO_NAME/$exec_file" "$INSTALL_PREFIX"
+			"$SUDO" install -v -m 0755 "$REPO_NAME/$exec_file" "$INSTALL_PREFIX"
 		done
 		for script_file in $SCRIPT_FILES ; do
-			install -v -m 0644 "$REPO_NAME/$script_file" "$INSTALL_PREFIX"
+			"$SUDO" install -v -m 0644 "$REPO_NAME/$script_file" "$INSTALL_PREFIX"
 		done
 		exit
 		;;
